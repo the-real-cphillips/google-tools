@@ -52,13 +52,16 @@ def gather_messages(auth, userId='me', query='',  num_per_page=5000):
             max_time=60)
 def delete_messages(auth, messageList, userId='me'):
     count = 0
-    for message in messageList:
-        request = auth.users().messages().trash(userId=userId, id=message)
-        count += 1
-        response = request.execute()
-        print("[√] Deleting {} of {}".format(count, len(messageList)))
-    print("[√] Deleted: {} Messages".format(count))
-    return True
+    try:
+        for message in messageList:
+            request = auth.users().messages().trash(userId=userId, id=message)
+            count += 1
+            response = request.execute()
+            print("[√] Deleting {} of {}".format(count, len(messageList)))
+        print("[√] Deleted: {} Messages".format(count))
+        return True
+    except errors.HttpError as e:
+        print("[X] Error: {}".format(e))
 
 
 def main():
