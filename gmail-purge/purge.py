@@ -3,16 +3,17 @@ from __future__ import print_function
 from googleapiclient.discovery import build
 from httplib2 import Http
 from oauth2client import file, client, tools
-from googleapiclient import errors
 import backoff
+import googleapiclient
+import sys
 
 messages_to_delete = []
 
 # Auth Stuff
 # If modifying these scopes, delete the file token.json.
-SCOPES = 'https://www.googleapis.com/auth/gmail.modify'
+SCOPES = 'https://mail.google.com'
 
-def auth(scope, fn='credentials.json', svc='gmail', version='v1'):
+def auth(scope=SCOPES, fn='credentials.json', svc='gmail', version='v1'):
     store = file.Storage('token.json')
     creds = store.get()
     if not creds or creds.invalid:
@@ -23,8 +24,7 @@ def auth(scope, fn='credentials.json', svc='gmail', version='v1'):
 
 
 @backoff.on_exception(backoff.expo,
-            errors.HttpError,
-            max_time=60)
+            googleapiclient.errors.HttpError)
 def gather_messages(auth, userId='me', query='',  num_per_page=5000):
     request = auth.users().messages().list(userId=userId, q=query, maxResults=num_per_page)
     response = request.execute()
@@ -45,36 +45,64 @@ def gather_messages(auth, userId='me', query='',  num_per_page=5000):
         return len(messages_to_delete)
     except KeyError as e:
         print("[X] No Matches Found, Please Check Your Query Strng")
+        sys.exit(1)
 
 
 @backoff.on_exception(backoff.expo,
-            errors.HttpError,
-            max_time=60)
-def delete_messages(auth, messageList, userId='me'):
+            googleapiclient.errors.HttpError)
+def trash_messages(auth, messageList, userId='me'):
     count = 0
     try:
         for message in messageList:
             request = auth.users().messages().trash(userId=userId, id=message)
             count += 1
             response = request.execute()
-            print("[√] Deleting {} of {}".format(count, len(messageList)))
-        print("[√] Deleted: {} Messages".format(count))
+            print("[√] Trashing {} of {} - Message ID: {}".format(count, len(messageList), message))
+        print("[√] Trashed: {} Messages".format(count))
         return True
-    except errors.HttpError as e:
+    except googleapiclient.errors.HttpError as e:
         print("[X] Error: {}".format(e))
+
+
+@backoff.on_exception(backoff.expo,
+            googleapiclient.errors.HttpError)
+def delete_messages(auth, messageList, userId='me'):
+    approval = input("[???] Preparing to delete {} messages. Approve? (Y/N) ".format(len(messageList)))
+    if approval.lower() == 'y':
+        try:
+            chunks = [messageList[x:x+1000] for x in range(0, len(messageList), 1000)]
+            for page in range(0,len(chunks)):
+                request = auth.users().messages().batchDelete(userId='me', 
+                        body= 
+                        {
+                            "ids": chunks[page]
+                        }
+                )
+                response = request.execute()
+                print("[√] SUCCESS {} Messages have been deleted!".format(len(chunks[page])))
+            print("[√] SUCCESS Total Number of Delete Messages: {}".format(len(messageList)))
+        except googleapiclient.errors.HttpError as e:
+            print("[X] Error: {}".format(e))
+    else:
+        print("[I] Not Deleting, Would have deleted: {} message(s)".format(len(messageList)))
+
 
 
 def main():
     a = auth(SCOPES)
     query_string = input("[?] Enter your query (standard gmail format): ")
-    delete_option = input("[?] Would you like to delete the matched messages? Y/N: ")
+    option = input("[?] Gather Matched Amount? Move to Trash? or Delete? (delete | gather | trash): ")
     print("[√] Gathering Messages using query_string: '{}'".format(query_string))
     gather_messages(a, query=query_string)
     
-    if delete_option.lower() == 'y':
+    if option.lower() == 't' or option.lower() == 'trash':
+        trash_messages(a, messages_to_delete)
+    elif option.lower() == 'd' or option.lower() == 'delete':
         delete_messages(a, messages_to_delete)
+    elif option.lower() == 'g' or option.lower() == 'gather':
+        print("Total Matched Messages: {}".format(len(messages_to_delete)))
     else:
-        print("[I] Not Deleting, Would have deleted: {} message(s)".format(len(messages_to_delete)))
+        print("Invalid Option: please use `trash` or `delete`")
 
 
 if __name__ == '__main__' :
