@@ -10,7 +10,7 @@ messages_to_delete = []
 
 # Auth Stuff
 # If modifying these scopes, delete the file token.json.
-SCOPES = 'https://www.googleapis.com/auth/gmail.readonly'
+SCOPES = 'https://www.googleapis.com/auth/gmail.modify'
 
 def auth(scope, fn='credentials.json', svc='gmail', version='v1'):
     store = file.Storage('token.json')
