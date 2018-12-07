@@ -66,23 +66,20 @@ def trash_messages(auth, messageList, userId='me'):
 
 @backoff.on_exception(backoff.expo,
             googleapiclient.errors.HttpError)
-def delete_messages(auth, messageList, userId='me'):
-    approval = input("[???] Preparing to delete {} messages. Approve? (Y/N) ".format(len(messageList)))
+def delete_messages(auth, messageList, approval, userId='me'):
     if approval.lower() == 'y':
-        try:
-            chunks = [messageList[x:x+1000] for x in range(0, len(messageList), 1000)]
-            for page in range(0,len(chunks)):
-                request = auth.users().messages().batchDelete(userId='me', 
-                        body= 
-                        {
-                            "ids": chunks[page]
-                        }
-                )
-                response = request.execute()
-                print("[√] SUCCESS {} Messages have been deleted!".format(len(chunks[page])))
-            print("[√] SUCCESS Total Number of Delete Messages: {}".format(len(messageList)))
-        except googleapiclient.errors.HttpError as e:
-            print("[X] Error: {}".format(e))
+        chunks = [messageList[x:x+1000] for x in range(0, len(messageList), 1000)]
+        for page in range(0,len(chunks)):
+            request = auth.users().messages().batchDelete(
+                userId='me', 
+                body= 
+                {
+                    "ids": chunks[page]
+                }
+            )
+            response = request.execute()
+            print("[√] SUCCESS {} Messages have been deleted! - {}".format(len(chunks[page]), page))
+        print("[√] SUCCESS Total Number of Delete Messages: {}".format(len(messageList)))
     else:
         print("[I] Not Deleting, Would have deleted: {} message(s)".format(len(messageList)))
 
@@ -98,11 +95,12 @@ def main():
     if option.lower() == 't' or option.lower() == 'trash':
         trash_messages(a, messages_to_delete)
     elif option.lower() == 'd' or option.lower() == 'delete':
-        delete_messages(a, messages_to_delete)
+        approval = input("[???] Preparing to delete {} messages. Approve? (Y/N) ".format(len(messages_to_delete)))
+        delete_messages(a, messages_to_delete, approval.lower())
     elif option.lower() == 'g' or option.lower() == 'gather':
         print("Total Matched Messages: {}".format(len(messages_to_delete)))
     else:
-        print("Invalid Option: please use `trash` or `delete`")
+        print("Invalid Option: please use 'delete', gather', or `trash`")
 
 
 if __name__ == '__main__' :
