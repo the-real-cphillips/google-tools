@@ -7,7 +7,7 @@ import backoff
 import googleapiclient
 import sys
 
-messages_to_delete = []
+messages_to_process = []
 
 # Auth Stuff
 # If modifying these scopes, delete the file token.json.
@@ -32,7 +32,7 @@ def gather_messages(auth, userId='me', query='',  num_per_page=5000):
     try:
         messages = response['messages']
         for message in messages:
-            messages_to_delete.append(message['id'])
+            messages_to_process.append(message['id'])
         count = 0
         print("[I] Gathering Pages")
         while response.get('nextPageToken'):
@@ -42,8 +42,8 @@ def gather_messages(auth, userId='me', query='',  num_per_page=5000):
             messages += response['messages']
         print("[√] Total Page Count: {}".format(count))
         for message in messages:
-            messages_to_delete.append(message['id'])
-        return len(messages_to_delete)
+            messages_to_process.append(message['id'])
+        return len(messages_to_process)
     except KeyError as e:
         print("[X] No Matches Found, Please Check Your Query Strng")
         sys.exit(1)
@@ -85,23 +85,46 @@ def delete_messages(auth, messageList, approval, userId='me'):
         print("[I] Not Deleting, Would have deleted: {} message(s)".format(len(messageList)))
 
 
+@backoff.on_exception(backoff.expo,
+            googleapiclient.errors.HttpError)
+def archive_messages(auth,  messageList, approval, userId='me'):
+    if approval.lower() == 'y':
+        chunks = [messageList[x:x+1000] for x in range(0, len(messageList), 1000)]
+        for page in range(0,len(chunks)):
+            request = auth.users().messages().batchModify(
+                userId='me', 
+                body= 
+                {
+                    "ids": chunks[page],
+                    "removeLabelIds": ['INBOX']
+                }
+            )
+            response = request.execute()
+            print("[√] SUCCESS {} Messages have been archived! - {}".format(len(chunks[page]), page))
+        print("[√] SUCCESS Total Number of Messages archived: {}".format(len(messageList)))
+    else:
+        print("[I] Not Archiving, Would have archived: {} message(s)".format(len(messageList)))
+
 
 def main():
     a = auth(SCOPES)
     query_string = input("[?] Enter your query (standard gmail format): ")
-    option = input("[?] Gather Matched Amount? Move to Trash? or Delete? (delete | gather | trash): ")
+    option = input("[?] Gather Matched Amount? Archive Matched? Move to Trash? or Delete? (archive | delete | gather | trash): ")
     print("[√] Gathering Messages using query_string: '{}'".format(query_string))
     gather_messages(a, query=query_string)
     
     if option.lower() == 't' or option.lower() == 'trash':
-        trash_messages(a, messages_to_delete)
+        trash_messages(a, messages_to_process)
     elif option.lower() == 'd' or option.lower() == 'delete':
-        approval = input("[???] Preparing to delete {} messages. Approve? (Y/N) ".format(len(messages_to_delete)))
-        delete_messages(a, messages_to_delete, approval.lower())
+        approval = input("[???] Preparing to delete {} messages. Approve? (Y/N) ".format(len(messages_to_process)))
+        delete_messages(a, messages_to_process, approval.lower())
+    elif option.lower() == 'a' or option.lower() == 'archive':
+        approval = input("[???] Preparing to archive {} messages. Approve? (Y/N) ".format(len(messages_to_process)))
+        archive_messages(a, messages_to_process, approval.lower())
     elif option.lower() == 'g' or option.lower() == 'gather':
-        print("Total Matched Messages: {}".format(len(messages_to_delete)))
+        print("Total Matched Messages: {}".format(len(messages_to_process)))
     else:
-        print("Invalid Option: please use 'delete', gather', or `trash`")
+        print("Invalid Option: please use 'archive', 'delete', gather', or `trash`")
 
 
 if __name__ == '__main__' :
