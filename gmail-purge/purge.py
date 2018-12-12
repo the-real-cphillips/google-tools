@@ -24,10 +24,24 @@ def auth(scope=SCOPES, fn='credentials.json', svc='gmail', version='v1'):
     return service
 
 
+def gather_labels(auth, label_name, userId='me'):
+  try:
+    response = auth.users().labels().list(userId=userId).execute()
+    labels = response['labels']
+    for label in labels:
+        if label['name'].lower() == label_name.lower():
+            return label['id']
+  except googleapiclient.errors.HttpError as error:
+    print(f'An error occurred: {error}')
+
+
 @backoff.on_exception(backoff.expo,
             googleapiclient.errors.HttpError)
-def gather_messages(auth, userId='me', query='',  num_per_page=5000):
-    request = auth.users().messages().list(userId=userId, q=query, maxResults=num_per_page)
+def gather_messages(auth, userId='me', query='',  num_per_page=5000, labels=None):
+    if labels:
+        request = auth.users().messages().list(userId=userId, q=query, labelIds=[labels], maxResults=num_per_page)
+    else:
+        request = auth.users().messages().list(userId=userId, q=query, maxResults=num_per_page)
     response = request.execute()
     try:
         messages = response['messages']
@@ -110,8 +124,10 @@ def main():
     a = auth(SCOPES)
     query_string = input("[?] Enter your query (standard gmail format): ")
     option = input("[?] Gather Matched Amount? Archive Matched? Move to Trash? or Delete? (archive | delete | gather | trash): ")
+    label = input("[?] Specific Label to match? (Leave Blank for None): ")
     print("[√] Gathering Messages using query_string: '{}'".format(query_string))
-    gather_messages(a, query=query_string)
+    label_id = gather_labels(a, label)
+    gather_messages(a, query=query_string, labels=label_id)
     
     if option.lower() == 't' or option.lower() == 'trash':
         trash_messages(a, messages_to_process)
