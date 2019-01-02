@@ -10,7 +10,6 @@ So I wrote this.
 you need API keys for this from Google you can do this in projects.
 I'll flesh this out a bit more to explain the full setup.
 
-
 ## Step 1 - Create the Project
 - Go Here - https://console.developers.google.com
 - click `Create Project` button
@@ -44,5 +43,6 @@ You should be ready at this point to do what you need, so let's continue
 - run `pip install -r requirements.txt`
 - then run `./purge.py`
   - NOTE: First run will do some OAuth stuff, you'll need to authorize it, this creates a unique `token.json` that handles the permission scopes.
+
 
 ## DONE!
