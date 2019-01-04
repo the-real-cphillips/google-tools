@@ -12,7 +12,7 @@ import backoff
 import googleapiclient
 
 
-def auth(scope='https://mail.google.com', fn='credentials.json', svc='gmail', version='v1'):
+def auth(scope='https://mail.google.com', file_name='credentials.json', svc='gmail', version='v1'):
     """Auth
     This handles the authorization.
 
@@ -108,7 +108,7 @@ class Purge:
                 to_process[message_count] = message['id']
             self.to_process = to_process
         except KeyError as e:
-            print("[X] No Matches Found, Please Check Your Query Strng")
+            print("[X] No Matches Found, Please Check Your Query String")
             sys.exit(1)
 
     @backoff.on_exception(backoff.expo, googleapiclient.errors.HttpError)
@@ -143,7 +143,7 @@ class Purge:
                 count += 1
                 print(f'[√] Action: {action} - {count} of {len(message_list)} - Message ID: {message_list[item]}')
             except googleapiclient.errors.HttpError as error:
-                if e.resp.status == 404:
+                if error.resp.status == 404:
                     print(f'[X] Error: ID {message_list[item]} Not Found')
                 else:
                     print(f'[X] Error: ID {mesage_list[item]} {error}')
