@@ -41,8 +41,47 @@ You should be ready at this point to do what you need, so let's continue
 - create a virtualenv
 - activate your virtualenv
 - run `pip install -r requirements.txt`
-- then run `./purge.py`
+- then run See the examples below!
   - NOTE: First run will do some OAuth stuff, you'll need to authorize it, this creates a unique `token.json` that handles the permission scopes.
 
-
 ## DONE!
+
+## Usage Examples:
+
+This section assumes you've done the above installation steps, ie you have creds and a virtualenv
+
+#### Example - Deleting some stuff
+
+Gmail has this notion of "category" it's those neatly bundled things:
+- Forums
+- Promotions
+- Social
+- Updates
+
+I never read those, so I targeted the `category:Forums` and chose anything `older_than:365d`
+You can string the query along however you like, just be sure to wrap in Double-Quotes
+
+As you can see in the output, it was a lot of messages `5803`.
+This caught that and gave the option of processing in Bulk.
+
+Both `delete` and `archive` have this feature, sadly `trash` does not...
+
+
+```
+> ./purge.py -a delete -q "older_than:36d AND category:Forums"
+
+thering Pages
+[√] Total Page Count: 59
+[?] There are 5803 messages
+[?] Would you like to process these in bulk? (Y/N): Y
+[I] Processing in Bulk
+[√] Bulk Action: SUCCESS 1000 Messages have been deleted! - 0
+[√] Bulk Action: SUCCESS 1000 Messages have been deleted! - 1
+[√] Bulk Action: SUCCESS 1000 Messages have been deleted! - 2
+[√] Bulk Action: SUCCESS 1000 Messages have been deleted! - 3
+[√] Bulk Action: SUCCESS 1000 Messages have been deleted! - 4
+[√] Bulk Action: SUCCESS 803 Messages have been deleted! - 5
+[√] Bulk Action: SUCCESS Total Number of Processed Messages: 5803
+```
+
+

@@ -193,8 +193,8 @@ class Purge:
 
             dynamic_request = resource(userId=userId, body=body)
             response = dynamic_request.execute()
-            print(f'[√] SUCCESS {len(chunks[page])} Messages have been {action}d! - {page}')
-        print(f'[√] SUCCESS Total Number of Processed Messages: {len(list_of_ids)}')
+            print(f'[√] Bulk Action: SUCCESS {len(chunks[page])} Messages have been {action}d! - {page}')
+        print(f'[√] Bulk Action: SUCCESS Total Number of Processed Messages: {len(list_of_ids)}')
         return True
 
 
