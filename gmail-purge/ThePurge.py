@@ -52,26 +52,7 @@ class Purge:
     def __init__(self, connection):
         self.connection = connection
 
-    def get_label_id(self, label_name, userId='me'):
-        """Get Label ID
-        This accepts a Friendly Label Name that a user has created, and converts it to it's ID.
-        This is used to pass on to the `gather` class method, if using Labels in your query.
-
-        Params:
-        - label_name - str
-        - userId - str - Defaults to 'me', special keyword for your account.
-        """
-
-        try:
-            response = self.connection.users().labels().list(userId=userId).execute()
-            labels = response['labels']
-            for label in labels:
-                if label['name'].lower() == label_name.lower():
-                    return label['id']
-        except googleapiclient.errors.HttpError as error:
-            print(f'An error occurred: {error}')
-
-    def gather(self, userId='me', query='', label=None):
+    def gather(self, userId='me', query=''):
         """Gather
         This gathers the messages that will be processed through the purge features
 
@@ -79,17 +60,12 @@ class Purge:
         - userId - str - Default: 'me'
         - query - str - This follows the standard GMAIL Search strings
           - ie: older_than:20d etc...
-        - label - str - Default is None, if you want to use a label, be sure to use `get_label_id` first
         """
 
         to_process = {}
         message_count = 0
 
-        if label:
-            request = self.connection.users().messages().list(userId=userId, q=query, labelIds=[label])
-        else:
-            request = self.connection.users().messages().list(userId=userId, q=query)
-
+        request = self.connection.users().messages().list(userId=userId, q=query)
         response = request.execute()
         try:
             messages = response['messages']
@@ -107,6 +83,7 @@ class Purge:
                 message_count += 1
                 to_process[message_count] = message['id']
             self.to_process = to_process
+            print(f'[√] Total Message Count: {len(self.to_process)}')
         except KeyError as e:
             print("[X] No Matches Found, Please Check Your Query String")
             sys.exit(1)
@@ -115,7 +92,6 @@ class Purge:
     def purge(self, message_list, action, userId='me'):
         """Purge
         This is the main action where things get deleted or trashed.
-        If you are looking for an archive option, that doesn't exist yet.
 
         Params:
         - message_list - dict - dict format is { int : 'str' }
@@ -126,18 +102,21 @@ class Purge:
           - you get this after you've ran Object.gather()
             - Object.to_process is available with the necessary dict.
             - pass that into this.
-        - action - str - delete or trash, no default.
+        - action - str - archive, delete or trash
         """
-
-        if action.lower() == 'archive':
-            print("[X] Error illegal action, only 'delete' and 'trash' allowed")
-            sys.exit(2)
-            return False
 
         count = 0
         for item in message_list:
-            resource = getattr(self.connection.users().messages(), action)
-            dynamic_request = resource(userId=userId, id=message_list[item])
+            if action.lower() == 'archive':
+                resource = getattr(self.connection.users().messages(), 'modify')
+                dynamic_request = resource(userId=userId, id=message_list[item], body=
+                    {
+                        "removeLabelIds": [ "INBOX" ]
+                    })
+            else:
+                resource = getattr(self.connection.users().messages(), action)
+                dynamic_request = resource(userId=userId, id=message_list[item])
+
             try:
                 response = dynamic_request.execute()
                 count += 1

@@ -50,7 +50,23 @@ You should be ready at this point to do what you need, so let's continue
 
 This section assumes you've done the above installation steps, ie you have creds and a virtualenv
 
-#### Example - Deleting some stuff
+#### Example 1 - Gathering (semi-dry-run)
+Say you're curious about how many email messages might be processed before running the archive/delete/trash portion, you can pass `-a gather` to `purge.py` and it will output how many pages of messages, and the total count of messages
+
+
+```
+> ./purge -a gather -q "label:my-special-label"
+
+[I] Gathering Pages
+[√] Total Page Count: 1
+[√] Total Message Count: 11
+
+```
+
+
+
+
+#### Example 2 - Deleting some stuff
 
 Gmail has this notion of "category" it's those neatly bundled things:
 - Forums
